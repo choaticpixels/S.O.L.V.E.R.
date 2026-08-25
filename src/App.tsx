@@ -19,11 +19,15 @@ export default function App() {
     error,
     highlightedSignature,
     currentFilter,
+    layoutMode,
+    setLayoutMode,
     loadWallet,
     filterByStatus,
     executeSQL,
+    analyzeAnomalies,
     setHighlightedSignature,
     resetFilter,
+    defaultWallets,
   } = useBlockchainData();
 
   const [selectedNode, setSelectedNode] = useState<Node3D | null>(null);
@@ -52,6 +56,7 @@ export default function App() {
     filterByStatus,
     highlightNode: handleHighlightNode,
     resetView: handleResetView,
+    analyzeAnomalies,
   });
 
   const handleSelectNode = (node: Node3D) => {
@@ -67,6 +72,7 @@ export default function App() {
         highlightedSignature={highlightedSignature}
         onSelectNode={handleSelectNode}
         resetTrigger={resetTrigger}
+        walletAddress={walletAddress}
       />
 
       {/* Top Left: Wallet Search Overlay */}
@@ -76,6 +82,7 @@ export default function App() {
         isDuckDBReady={isDuckDBReady}
         onSearch={loadWallet}
         error={error}
+        defaultWallets={defaultWallets}
       />
 
       {/* Top Right: WebMCP Status & Tools Indicator */}
@@ -108,7 +115,10 @@ export default function App() {
         nodes={nodes3D}
         totalTransactions={transactions.length}
         currentFilterStatus={currentFilter.status || 'all'}
+        layoutMode={layoutMode}
+        onChangeLayout={setLayoutMode}
         onFilterStatus={filterByStatus}
+        onAnalyzeAnomalies={analyzeAnomalies}
         onResetView={handleResetView}
       />
     </div>

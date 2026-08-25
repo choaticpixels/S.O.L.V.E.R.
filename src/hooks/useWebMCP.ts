@@ -4,9 +4,10 @@ interface WebMCPHooks {
   filterByStatus: (status: 'success' | 'failed' | 'all') => Promise<void>;
   highlightNode: (signature: string) => void;
   resetView: () => void;
+  analyzeAnomalies?: () => Promise<string | null>;
 }
 
-export function useWebMCP({ filterByStatus, highlightNode, resetView }: WebMCPHooks) {
+export function useWebMCP({ filterByStatus, highlightNode, resetView, analyzeAnomalies }: WebMCPHooks) {
   const [isSupported, setIsSupported] = useState<boolean>(false);
   const [registeredTools, setRegisteredTools] = useState<string[]>([]);
   const [lastAction, setLastAction] = useState<string | null>(null);
@@ -105,25 +106,54 @@ export function useWebMCP({ filterByStatus, highlightNode, resetView }: WebMCPHo
         },
       };
 
+      // 4. Tool: analyze_anomalies
+      const anomalyToolDef = {
+        name: 'analyze_anomalies',
+        description: 'Performs DuckDB SQL query to detect high-risk or failed transactions and auto-highlights the highest risk node.',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+        execute: async () => {
+          if (analyzeAnomalies) {
+            const sig = await analyzeAnomalies();
+            setLastAction(`analyze_anomalies() -> ${sig ? sig.slice(0, 8) + '...' : 'none'}`);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: sig
+                    ? `Anomalies found! Focused on top high-risk transaction: ${sig}`
+                    : 'No anomalous or failed transactions detected in current set.',
+                },
+              ],
+            };
+          }
+          return { content: [{ type: 'text', text: 'Anomaly analysis not ready.' }] };
+        },
+      };
+
       if (modelContext && typeof modelContext.registerTool === 'function') {
         modelContext.registerTool(filterToolDef);
         modelContext.registerTool(highlightToolDef);
         modelContext.registerTool(resetToolDef);
+        modelContext.registerTool(anomalyToolDef);
       } else {
         // Fallback global window object registration for browser testing / devtools
         (window as any).__webmcp_tools__ = {
           filter_transactions: filterToolDef.execute,
           highlight_node: highlightToolDef.execute,
           reset_view: resetToolDef.execute,
+          analyze_anomalies: anomalyToolDef.execute,
         };
       }
 
-      tools.push('filter_transactions', 'highlight_node', 'reset_view');
+      tools.push('filter_transactions', 'highlight_node', 'reset_view', 'analyze_anomalies');
       setRegisteredTools(tools);
     } catch (err) {
       console.warn('WebMCP registration warning (non-fatal):', err);
     }
-  }, [filterByStatus, highlightNode, resetView]);
+  }, [filterByStatus, highlightNode, resetView, analyzeAnomalies]);
 
   return {
     isSupported,

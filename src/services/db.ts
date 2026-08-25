@@ -35,7 +35,7 @@ export async function getDuckDB(): Promise<{ db: duckdb.AsyncDuckDB; conn: duckd
   await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
   const conn = await db.connect();
 
-  // Create primary transaction table schema
+  // Create primary transaction table schema with full forensic fields
   await conn.query(`
     CREATE TABLE IF NOT EXISTS transactions (
       signature VARCHAR PRIMARY KEY,
@@ -44,7 +44,11 @@ export async function getDuckDB(): Promise<{ db: duckdb.AsyncDuckDB; conn: duckd
       status VARCHAR,
       err VARCHAR,
       confirmationStatus VARCHAR,
-      memo VARCHAR
+      memo VARCHAR,
+      amountSol DOUBLE,
+      transactionIndex BIGINT,
+      riskLevel VARCHAR,
+      type VARCHAR
     );
   `);
 
@@ -73,6 +77,10 @@ export async function loadTransactionsToDuckDB(txs: TransactionRecord[]): Promis
     err: t.err ? String(t.err) : '',
     confirmationStatus: String(t.confirmationStatus || 'finalized'),
     memo: t.memo ? String(t.memo) : '',
+    amountSol: Number(t.amountSol || 0),
+    transactionIndex: Number(t.transactionIndex || 0),
+    riskLevel: String(t.riskLevel || 'LOW'),
+    type: String(t.type || 'TRANSFER'),
   }));
 
   const jsonContent = JSON.stringify(normalizedData);
@@ -81,7 +89,7 @@ export async function loadTransactionsToDuckDB(txs: TransactionRecord[]): Promis
   await db.registerFileText(fileName, jsonContent);
   await conn.query(`
     INSERT INTO transactions
-    SELECT signature, blockTime, slot, status, err, confirmationStatus, memo
+    SELECT signature, blockTime, slot, status, err, confirmationStatus, memo, amountSol, transactionIndex, riskLevel, type
     FROM read_json_auto('${fileName}');
   `);
   

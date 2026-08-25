@@ -3,19 +3,25 @@ import { TransactionRecord, Node3D, FilterOptions } from '../types';
 import { fetchWalletTransactions, isValidSolanaAddress } from '../services/solana';
 import { getDuckDB, loadTransactionsToDuckDB, runSQLQuery } from '../services/db';
 
-const DEFAULT_WALLET = '5YNmS1R9nNSCDzb5a7mMJ1dwK9uHeAAF4CmPEwKgVWr8'; // Solana Foundation
+const DEFAULT_WALLETS = [
+  { name: 'Raydium Pool', address: '5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1' },
+  { name: 'Jupiter Aggregator', address: 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4' },
+  { name: 'Solana Foundation', address: '5YNmS1R9nNSCDzb5a7mMJ1dwK9uHeAAF4CmPEwKgVWr8' },
+  { name: 'Binance Hot Wallet', address: '2ojv9BAiHUrvG9xjTxGatNuP5nNDxDFPxPz2w1Pug1Gq' },
+];
 
 export function useBlockchainData() {
-  const [walletAddress, setWalletAddress] = useState<string>(DEFAULT_WALLET);
+  const [walletAddress, setWalletAddress] = useState<string>(DEFAULT_WALLETS[0].address);
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<TransactionRecord[]>([]);
   const [nodes3D, setNodes3D] = useState<Node3D[]>([]);
+  const [layoutMode, setLayoutMode] = useState<'cluster' | 'helical'>('cluster');
   
   const [isDuckDBReady, setIsDuckDBReady] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [highlightedSignature, setHighlightedSignature] = useState<string | null>(null);
-  const [currentFilter, setCurrentFilter] = useState<FilterOptions>({ status: 'all' });
+  const [currentFilter, setCurrentFilter] = useState<FilterOptions>({ status: 'all', riskLevel: 'ALL' });
 
   // Initialize DuckDB on page load
   useEffect(() => {
@@ -33,10 +39,11 @@ export function useBlockchainData() {
     };
   }, []);
 
-  // Fetch transactions and load into DuckDB when wallet address changes
+  // Fetch transactions and load into DuckDB
   const loadWallet = useCallback(async (address: string) => {
-    if (!isValidSolanaAddress(address)) {
-      setError('Invalid Solana wallet public key.');
+    const cleanAddress = address.trim();
+    if (!isValidSolanaAddress(cleanAddress)) {
+      setError('Invalid Solana wallet public key address.');
       return;
     }
 
@@ -45,22 +52,22 @@ export function useBlockchainData() {
     setHighlightedSignature(null);
 
     try {
-      const txs = await fetchWalletTransactions(address, 100);
+      const txs = await fetchWalletTransactions(cleanAddress, 100);
       setTransactions(txs);
       setFilteredTransactions(txs);
 
       // Ingest into DuckDB WASM
       await loadTransactionsToDuckDB(txs);
-      setWalletAddress(address);
+      setWalletAddress(cleanAddress);
     } catch (err: any) {
       console.error('Error loading wallet transactions:', err);
-      setError(err?.message || 'Failed to load wallet data.');
+      setError(err?.message || 'Failed to load wallet data from Solana RPC.');
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Auto load default wallet once DuckDB is ready
+  // Auto load first default wallet when DuckDB is ready
   useEffect(() => {
     if (isDuckDBReady) {
       loadWallet(walletAddress);
@@ -76,24 +83,45 @@ export function useBlockchainData() {
 
     const total = filteredTransactions.length;
     const sorted = [...filteredTransactions].sort((a, b) => (b.blockTime || 0) - (a.blockTime || 0));
-    
-    // Create 3D spatial positioning (Helical / Force layout)
-    const nodes: Node3D[] = sorted.map((tx, idx) => {
-      const angle = idx * 0.45;
-      const radius = 6 + (idx / total) * 14;
-      const y = (idx - total / 2) * 0.4;
-      const x = Math.cos(angle) * radius;
-      const z = Math.sin(angle) * radius;
 
-      // Color logic adhering strictly to design system:
-      // Primary: Solana Purple #9945FF, Green #14F195 for latest, Yellow #FED700 for highlight
-      let color = '#9945FF';
+    const nodes: Node3D[] = sorted.map((tx, idx) => {
+      let x = 0, y = 0, z = 0;
+
+      if (layoutMode === 'helical') {
+        // Helical / Spiral Timeline
+        const angle = idx * 0.45;
+        const radius = 6 + (idx / total) * 14;
+        y = (idx - total / 2) * 0.4;
+        x = Math.cos(angle) * radius;
+        z = Math.sin(angle) * radius;
+      } else {
+        // Cluster / Orbital Network Graph
+        const goldenAngle = 137.5 * (Math.PI / 180);
+        const radius = Math.sqrt(idx + 1) * 2.2 + 4;
+        const phi = Math.acos(1 - (2 * (idx + 0.5)) / total);
+        const theta = goldenAngle * idx;
+
+        x = radius * Math.sin(phi) * Math.cos(theta);
+        y = radius * Math.sin(phi) * Math.sin(theta);
+        z = radius * Math.cos(phi);
+      }
+
+      // Color and Geometry Shape assignments
+      let color = '#9945FF'; // Default Solana Purple
+      let shape: 'sphere' | 'octahedron' | 'tetrahedron' | 'icosahedron' = 'sphere';
+
       if (tx.signature === highlightedSignature) {
-        color = '#FED700'; // Accent Yellow
-      } else if (idx < 5) {
-        color = '#14F195'; // Solana Green for recent
-      } else if (tx.status === 'failed') {
-        color = '#FF3366'; // Red for error
+        color = '#FED700'; // Accent Yellow for selected
+        shape = 'octahedron';
+      } else if (tx.status === 'failed' || tx.riskLevel === 'HIGH') {
+        color = '#FF3366'; // Crimson for high risk / failed
+        shape = 'tetrahedron';
+      } else if (tx.type === 'SWAP' || tx.type === 'CONTRACT') {
+        color = '#14F195'; // Solana Green
+        shape = 'icosahedron';
+      } else if (tx.amountSol > 20) {
+        color = '#FFB800'; // Gold
+        shape = 'octahedron';
       }
 
       return {
@@ -103,11 +131,12 @@ export function useBlockchainData() {
         z,
         position: [x, y, z],
         color,
+        shape,
       };
     });
 
     setNodes3D(nodes);
-  }, [filteredTransactions, highlightedSignature]);
+  }, [filteredTransactions, highlightedSignature, layoutMode]);
 
   // Apply DuckDB SQL filter based on status or custom SQL
   const filterByStatus = useCallback(
@@ -143,10 +172,27 @@ export function useBlockchainData() {
     [isDuckDBReady]
   );
 
+  const analyzeAnomalies = useCallback(async () => {
+    if (!isDuckDBReady) return null;
+
+    try {
+      const sql = "SELECT * FROM transactions WHERE status = 'failed' OR riskLevel = 'HIGH' ORDER BY amountSol DESC";
+      const anomalies = await runSQLQuery<TransactionRecord>(sql);
+      if (anomalies.length > 0) {
+        setFilteredTransactions(anomalies);
+        setHighlightedSignature(anomalies[0].signature);
+        return anomalies[0].signature;
+      }
+    } catch (err) {
+      console.error('Anomaly detection failed:', err);
+    }
+    return null;
+  }, [isDuckDBReady]);
+
   const resetFilter = useCallback(() => {
     setFilteredTransactions(transactions);
     setHighlightedSignature(null);
-    setCurrentFilter({ status: 'all' });
+    setCurrentFilter({ status: 'all', riskLevel: 'ALL' });
   }, [transactions]);
 
   return {
@@ -159,11 +205,15 @@ export function useBlockchainData() {
     error,
     highlightedSignature,
     currentFilter,
+    layoutMode,
+    setLayoutMode,
     loadWallet,
     filterByStatus,
     executeSQL,
+    analyzeAnomalies,
     setHighlightedSignature,
     resetFilter,
     setFilteredTransactions,
+    defaultWallets: DEFAULT_WALLETS,
   };
 }

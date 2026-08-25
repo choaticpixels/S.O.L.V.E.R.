@@ -6,6 +6,10 @@ export interface TransactionRecord {
   err: string | null;
   confirmationStatus: string;
   memo: string | null;
+  amountSol: number;
+  transactionIndex: number;
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+  type: 'TRANSFER' | 'SWAP' | 'CONTRACT' | 'FAILED';
   position?: [number, number, number];
 }
 
@@ -14,10 +18,12 @@ export interface Node3D extends TransactionRecord {
   y: number;
   z: number;
   color: string;
+  shape: 'sphere' | 'octahedron' | 'tetrahedron' | 'icosahedron';
 }
 
 export interface FilterOptions {
   status?: 'success' | 'failed' | 'all';
-  timeRange?: '1h' | '24h' | '7d' | 'all';
+  riskLevel?: 'ALL' | 'HIGH' | 'MEDIUM' | 'LOW';
   searchQuery?: string;
+  minAmount?: number;
 }

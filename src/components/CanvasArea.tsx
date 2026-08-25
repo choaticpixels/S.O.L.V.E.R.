@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, Html } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import * as THREE from 'three';
 import { Node3D } from '../types';
@@ -13,7 +13,49 @@ interface CanvasAreaProps {
   highlightedSignature: string | null;
   onSelectNode: (node: Node3D) => void;
   resetTrigger: number;
+  walletAddress: string;
 }
+
+// Center Target Wallet Node Component
+const CentralWalletNode: React.FC<{ walletAddress: string }> = ({ walletAddress }) => {
+  const meshRef = useRef<THREE.Mesh>(null);
+
+  useFrame(({ clock }) => {
+    if (meshRef.current) {
+      meshRef.current.rotation.y = clock.getElapsedTime() * 0.4;
+      meshRef.current.rotation.z = Math.sin(clock.getElapsedTime() * 0.2) * 0.2;
+    }
+  });
+
+  return (
+    <group position={[0, 0, 0]}>
+      {/* Outer Pulse Ring */}
+      <mesh>
+        <sphereGeometry args={[1.5, 24, 24]} />
+        <meshBasicMaterial color="#9945FF" transparent opacity={0.15} wireframe />
+      </mesh>
+
+      {/* Core Central Node */}
+      <mesh ref={meshRef}>
+        <dodecahedronGeometry args={[0.95, 0]} />
+        <meshStandardMaterial
+          color="#9945FF"
+          emissive="#9945FF"
+          emissiveIntensity={2.0}
+          roughness={0.1}
+          metalness={0.9}
+        />
+      </mesh>
+
+      {/* Label */}
+      <Html distanceFactor={18} position={[0, 1.4, 0]} center>
+        <div className="bg-solana-purple/90 border border-purple-300 text-white px-2.5 py-1 rounded-full shadow-lg font-mono text-[11px] font-bold tracking-wide whitespace-nowrap">
+          Target: {walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}
+        </div>
+      </Html>
+    </group>
+  );
+};
 
 // Camera animation controller component inside Canvas
 const CameraController: React.FC<{
@@ -47,7 +89,7 @@ const CameraController: React.FC<{
       controls.update();
     } else if (isResettingRef.current) {
       const defaultTarget = new THREE.Vector3(0, 0, 0);
-      const defaultCamPos = new THREE.Vector3(0, 8, 25);
+      const defaultCamPos = new THREE.Vector3(0, 10, 30);
 
       controls.target.lerp(defaultTarget, delta * 4);
       state.camera.position.lerp(defaultCamPos, delta * 4);
@@ -67,6 +109,7 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
   highlightedSignature,
   onSelectNode,
   resetTrigger,
+  walletAddress,
 }) => {
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const targetNode = nodes.find(n => n.signature === highlightedSignature) || null;
@@ -74,7 +117,7 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
   return (
     <div className="w-full h-full relative bg-slate-950">
       <Canvas
-        camera={{ position: [0, 8, 25], fov: 60 }}
+        camera={{ position: [0, 10, 30], fov: 60 }}
         gl={{ antialias: true, alpha: false }}
       >
         <CyberEnvironment />
@@ -83,7 +126,7 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
           makeDefault
           enableDamping
           dampingFactor={0.05}
-          maxDistance={60}
+          maxDistance={80}
           minDistance={3}
         />
         
@@ -92,6 +135,9 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
           resetTrigger={resetTrigger}
           controlsRef={controlsRef}
         />
+
+        {/* Central Wallet Hub Node */}
+        {walletAddress && <CentralWalletNode walletAddress={walletAddress} />}
 
         {/* Render 3D Transaction Connection Lines */}
         <TxConnections nodes={nodes} highlightedSignature={highlightedSignature} />
