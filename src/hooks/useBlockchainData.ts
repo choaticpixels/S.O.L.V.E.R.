@@ -161,12 +161,32 @@ export function useBlockchainData() {
     [isDuckDBReady]
   );
 
-  // Execute custom raw SQL
+  // Execute custom raw SQL safely without crashing 3D nodes on aggregate queries
   const executeSQL = useCallback(
-    async (sql: string): Promise<TransactionRecord[]> => {
-      if (!isDuckDBReady) throw new Error('DuckDB is not initialized yet.');
-      const results = await runSQLQuery<TransactionRecord>(sql);
-      setFilteredTransactions(results);
+    async (sql: string): Promise<any[]> => {
+      if (!isDuckDBReady) throw new Error('DuckDB engine is not initialized yet.');
+      const rawResults = await runSQLQuery<any>(sql);
+
+      // Clean BigInt values to numbers/strings to prevent React / Three.js serialization errors
+      const results = rawResults.map((row) => {
+        const cleaned: Record<string, any> = {};
+        for (const [key, val] of Object.entries(row)) {
+          if (typeof val === 'bigint') {
+            cleaned[key] = Number(val);
+          } else {
+            cleaned[key] = val;
+          }
+        }
+        return cleaned;
+      });
+
+      // Only update 3D node state if returned rows are full transaction objects with valid signatures
+      const isTxList = Array.isArray(results) && results.length > 0 && typeof results[0]?.signature === 'string';
+
+      if (isTxList) {
+        setFilteredTransactions(results as TransactionRecord[]);
+      }
+
       return results;
     },
     [isDuckDBReady]

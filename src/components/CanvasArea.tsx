@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, Component, ReactNode } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
@@ -7,6 +7,46 @@ import { Node3D } from '../types';
 import { TxNode } from './TxNode';
 import { TxConnections } from './TxConnections';
 import { CyberEnvironment } from './CyberEnvironment';
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class CanvasErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: any) {
+    console.error('3D Canvas Render Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 text-slate-100 font-mono p-4">
+          <div className="bg-rose-500/10 border border-rose-500/40 p-6 rounded-2xl max-w-md text-center space-y-4 backdrop-blur-xl">
+            <h2 className="text-sm font-bold text-rose-400 uppercase tracking-wider">3D WebGL Canvas Recovered</h2>
+            <p className="text-xs text-slate-300">A rendering exception occurred in the 3D viewport. The engine has been isolated cleanly.</p>
+            <button
+              onClick={() => this.setState({ hasError: false, error: null })}
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-cyan-500 text-slate-950 font-bold text-xs rounded-xl shadow-lg hover:brightness-110 transition-all"
+            >
+              Reset 3D Renderer
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 interface CanvasAreaProps {
   nodes: Node3D[];
@@ -26,6 +66,10 @@ const CentralWalletNode: React.FC<{ walletAddress: string }> = ({ walletAddress 
       meshRef.current.rotation.z = Math.sin(clock.getElapsedTime() * 0.2) * 0.2;
     }
   });
+
+  const labelText = walletAddress && typeof walletAddress === 'string'
+    ? `Target: ${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`
+    : 'Target Wallet';
 
   return (
     <group position={[0, 0, 0]}>
@@ -50,7 +94,7 @@ const CentralWalletNode: React.FC<{ walletAddress: string }> = ({ walletAddress 
       {/* Label */}
       <Html distanceFactor={18} position={[0, 1.4, 0]} center>
         <div className="bg-solana-purple/90 border border-purple-300 text-white px-2.5 py-1 rounded-full shadow-lg font-mono text-[11px] font-bold tracking-wide whitespace-nowrap">
-          Target: {walletAddress.slice(0, 4)}...{walletAddress.slice(-4)}
+          {labelText}
         </div>
       </Html>
     </group>
@@ -75,7 +119,7 @@ const CameraController: React.FC<{
     if (!controlsRef.current) return;
     const controls = controlsRef.current;
 
-    if (targetNode) {
+    if (targetNode && typeof targetNode.x === 'number') {
       isResettingRef.current = false;
       const targetVec = new THREE.Vector3(targetNode.x, targetNode.y, targetNode.z);
       controls.target.lerp(targetVec, delta * 5);
@@ -112,46 +156,56 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
   walletAddress,
 }) => {
   const controlsRef = useRef<OrbitControlsImpl>(null);
-  const targetNode = nodes.find(n => n.signature === highlightedSignature) || null;
+
+  // Filter out any invalid nodes without signature/coordinates
+  const validNodes = React.useMemo(
+    () => (Array.isArray(nodes) ? nodes.filter((n) => n && typeof n.signature === 'string' && typeof n.x === 'number') : []),
+    [nodes]
+  );
+
+  const targetNode = validNodes.find((n) => n.signature === highlightedSignature) || null;
 
   return (
-    <div className="w-full h-full relative bg-slate-950">
-      <Canvas
-        camera={{ position: [0, 10, 30], fov: 60 }}
-        gl={{ antialias: true, alpha: false }}
-      >
-        <CyberEnvironment />
-        <OrbitControls
-          ref={controlsRef}
-          makeDefault
-          enableDamping
-          dampingFactor={0.05}
-          maxDistance={80}
-          minDistance={3}
-        />
-        
-        <CameraController
-          targetNode={targetNode}
-          resetTrigger={resetTrigger}
-          controlsRef={controlsRef}
-        />
-
-        {/* Central Wallet Hub Node */}
-        {walletAddress && <CentralWalletNode walletAddress={walletAddress} />}
-
-        {/* Render 3D Transaction Connection Lines */}
-        <TxConnections nodes={nodes} highlightedSignature={highlightedSignature} />
-
-        {/* Render 3D Transaction Nodes */}
-        {nodes.map((node) => (
-          <TxNode
-            key={node.signature}
-            node={node}
-            isHighlighted={node.signature === highlightedSignature}
-            onSelect={onSelectNode}
+    <CanvasErrorBoundary>
+      <div className="w-full h-full relative bg-slate-950">
+        <Canvas
+          camera={{ position: [0, 10, 30], fov: 60 }}
+          gl={{ antialias: true, alpha: false }}
+        >
+          <CyberEnvironment />
+          <OrbitControls
+            ref={controlsRef}
+            makeDefault
+            enableDamping
+            dampingFactor={0.05}
+            maxDistance={80}
+            minDistance={3}
           />
-        ))}
-      </Canvas>
-    </div>
+
+          <CameraController
+            targetNode={targetNode}
+            resetTrigger={resetTrigger}
+            controlsRef={controlsRef}
+          />
+
+          {/* Central Wallet Hub Node */}
+          {walletAddress && <CentralWalletNode walletAddress={walletAddress} />}
+
+          {/* Render 3D Transaction Connection Lines */}
+          <TxConnections nodes={validNodes} highlightedSignature={highlightedSignature} />
+
+          {/* Render 3D Transaction Nodes */}
+          {validNodes.map((node) => (
+            <TxNode
+              key={node.signature}
+              node={node}
+              isHighlighted={node.signature === highlightedSignature}
+              onSelect={onSelectNode}
+            />
+          ))}
+        </Canvas>
+      </div>
+    </CanvasErrorBoundary>
   );
 };
+

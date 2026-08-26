@@ -18,7 +18,7 @@ export const NodeInspector: React.FC<NodeInspectorProps> = ({ node, onClose, onF
   const solscanUrl = `https://solscan.io/tx/${node.signature}`;
 
   return (
-    <div className="absolute top-4 right-4 z-20 w-80 md:w-96 bg-slate-900/90 backdrop-blur-2xl border border-slate-800 p-4 rounded-2xl shadow-2xl space-y-4 pointer-events-auto">
+    <div className="absolute top-20 right-4 z-30 w-80 md:w-96 bg-[#070f1e]/95 backdrop-blur-2xl border border-cyan-500/40 p-4 rounded-2xl shadow-[0_0_30px_rgba(0,242,254,0.2)] space-y-4 pointer-events-auto">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-3">
         <div className="flex items-center gap-2">
