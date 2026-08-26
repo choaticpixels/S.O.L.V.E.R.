@@ -98,9 +98,15 @@ export async function loadTransactionsToDuckDB(txs: TransactionRecord[]): Promis
 }
 
 /**
- * Executes arbitrary client-side SQL queries against the loaded DuckDB dataset.
+ * Executes read-only client-side SQL queries against the loaded DuckDB dataset.
+ * Strictly restricts queries to SELECT statements to prevent unauthorized data manipulation.
  */
 export async function runSQLQuery<T = any>(sql: string): Promise<T[]> {
+  const trimmed = sql.trim().toUpperCase();
+  if (!trimmed.startsWith('SELECT') && !trimmed.startsWith('WITH') && !trimmed.startsWith('EXPLAIN')) {
+    throw new Error('Security Restriction: Only read-only SELECT queries are permitted in the client-side SQL engine.');
+  }
+
   const { conn } = await getDuckDB();
   const result = await conn.query(sql);
   return result.toArray().map(row => row.toJSON() as T);
