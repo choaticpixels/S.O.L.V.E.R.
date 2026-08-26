@@ -58,6 +58,9 @@ export default function App() {
     highlightNode: handleHighlightNode,
     resetView: handleResetView,
     analyzeAnomalies,
+    queryDuckDB: executeSQL,
+    setLayoutMode,
+    loadWallet,
   });
 
   const handleSelectNode = (node: Node3D) => {
