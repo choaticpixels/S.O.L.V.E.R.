@@ -269,115 +269,95 @@ export const CyberHUD: React.FC<CyberHUDProps> = ({
         </div>
 
         {/* RIGHT COLUMN PANELS */}
-        <div className="w-80 flex flex-col justify-between space-y-3 pointer-events-auto">
+        <div className="w-80 flex flex-col justify-between space-y-2.5 pointer-events-auto">
 
-          {/* Top Right: BLOCKCHAIN INSIGHTS */}
-          <div className="bg-[#06101e]/85 backdrop-blur-md border border-cyan-500/30 rounded-xl p-3.5 shadow-lg">
-            <div className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider border-b border-cyan-500/20 pb-1.5 mb-2.5 flex items-center justify-between">
-              <span>Blockchain Insights</span>
-              <Globe className="w-3.5 h-3.5 text-cyan-400" />
+          {/* Top Right: WebMCP AI CO-PILOT PANEL (Replaces Blockchain Insights) */}
+          <div className="bg-[#06101e]/90 backdrop-blur-md border border-cyan-500/40 rounded-xl p-3 shadow-[0_0_20px_rgba(0,242,254,0.15)]">
+            <div className="flex items-center justify-between border-b border-cyan-500/20 pb-1.5 mb-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-100">
+                <Zap className="w-3.5 h-3.5 text-cyan-400" />
+                <span>WebMCP AI Co-Pilot</span>
+              </div>
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                W3C Standard
+              </span>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between bg-slate-950/60 p-2 rounded-lg border border-slate-800">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-solana-purple flex items-center justify-center font-bold text-[9px] text-black">SOL</div>
-                  <span className="text-xs font-bold text-slate-200">SOL/USD</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs font-bold text-emerald-400">${solPrice.toFixed(1)}</span>
-                  <span className="text-[9px] text-emerald-400 block flex items-center gap-0.5 justify-end">
-                    <TrendingUp className="w-2.5 h-2.5" /> +4.2%
-                  </span>
-                </div>
+            <div className="space-y-1.5 text-[10px]">
+              <div className="p-2 rounded-lg bg-slate-950/80 border border-slate-800 text-slate-300">
+                <div className="text-[9px] text-cyan-400 font-bold mb-0.5 uppercase">Agent Capabilities</div>
+                <div className="text-[10px] text-slate-400">7 Active WebMCP Tools Exposed (`filter_transactions`, `query_duckdb`, `analyze_anomalies`...)</div>
               </div>
 
-              <div className="flex items-center justify-between bg-slate-950/60 p-2 rounded-lg border border-slate-800">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center font-bold text-[9px] text-black">BTC</div>
-                  <span className="text-xs font-bold text-slate-200">BTC/USD</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs font-bold text-emerald-400">$64,250</span>
-                  <span className="text-[9px] text-emerald-400 block flex items-center gap-0.5 justify-end">
-                    <TrendingUp className="w-2.5 h-2.5" /> +1.8%
-                  </span>
-                </div>
+              <div className="flex items-center justify-between p-1.5 rounded-lg bg-purple-500/10 border border-purple-500/30 text-amber-300">
+                <span className="text-[9px] font-bold truncate">ChatGPT In-App Testing Ready</span>
+                <button
+                  onClick={onToggleWebMCP}
+                  className="text-[9px] px-2 py-0.5 rounded bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all shrink-0"
+                >
+                  {isWebMCPOpen ? 'Hide Prompts' : 'Show Prompts'}
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Middle Right: WALLET PROFILING */}
-          <div className="bg-[#06101e]/85 backdrop-blur-md border border-cyan-500/30 rounded-xl p-3.5 shadow-lg flex-1 flex flex-col justify-between">
-            <div className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider border-b border-cyan-500/20 pb-1.5 mb-2">
-              Target Wallet Profiling
+          {/* Middle Right: COMPACT WALLET PROFILING */}
+          <div className="bg-[#06101e]/85 backdrop-blur-md border border-cyan-500/30 rounded-xl p-3 shadow-lg flex-1 flex flex-col justify-between">
+            <div className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider border-b border-cyan-500/20 pb-1 mb-1.5 flex items-center justify-between">
+              <span>Target Profiling</span>
+              <span className="text-[9px] text-slate-400">Mainnet RPC</span>
             </div>
 
-            <div className="space-y-2 text-xs">
-              <div className="bg-slate-950/60 p-2 rounded-lg border border-slate-800">
-                <span className="text-[10px] text-slate-400 block">Target Address</span>
-                <span className="font-bold text-solana-yellow truncate block text-[11px]">
+            <div className="space-y-1.5 text-xs">
+              <div className="bg-slate-950/70 p-1.5 rounded-lg border border-slate-800">
+                <span className="text-[9px] text-slate-400 block uppercase">Target Address</span>
+                <span className="font-bold text-solana-yellow truncate block text-[10px]">
                   {walletAddress}
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-slate-950/60 p-2 rounded-lg border border-slate-800">
-                  <span className="text-[10px] text-slate-400 block">Volume Analyzed</span>
-                  <span className="font-bold text-emerald-400 text-xs">{totalVolume.toFixed(1)} SOL</span>
+              <div className="grid grid-cols-2 gap-1.5">
+                <div className="bg-slate-950/70 p-1.5 rounded-lg border border-slate-800">
+                  <span className="text-[9px] text-slate-400 block uppercase">Analyzed Volume</span>
+                  <span className="font-bold text-emerald-400 text-[11px]">{totalVolume.toFixed(1)} SOL</span>
                 </div>
 
-                <div className="bg-slate-950/60 p-2 rounded-lg border border-slate-800">
-                  <span className="text-[10px] text-slate-400 block">Threat Level</span>
-                  <span className={`font-bold text-xs ${highRiskCount > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                <div className="bg-slate-950/70 p-1.5 rounded-lg border border-slate-800">
+                  <span className="text-[9px] text-slate-400 block uppercase">Threat Level</span>
+                  <span className={`font-bold text-[11px] ${highRiskCount > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
                     {highRiskCount > 0 ? '98% (High)' : '12% (Low)'}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Circular Risk Progress Radial Gauge */}
-            <div className="mt-3 bg-slate-950/80 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
-              <div className="relative w-12 h-12 flex items-center justify-center">
-                <svg className="w-12 h-12 transform -rotate-90">
-                  <circle cx="24" cy="24" r="18" stroke="#1e293b" strokeWidth="4" fill="transparent" />
-                  <circle
-                    cx="24"
-                    cy="24"
-                    r="18"
-                    stroke={highRiskCount > 0 ? '#f43f5e' : '#34d399'}
-                    strokeWidth="4"
-                    fill="transparent"
-                    strokeDasharray="113"
-                    strokeDashoffset={highRiskCount > 0 ? '10' : '90'}
-                  />
-                </svg>
-                <span className="absolute text-[10px] font-bold text-white">
-                  {highRiskCount > 0 ? '98%' : '12%'}
-                </span>
-              </div>
-
-              <div className="text-right">
-                <span className="text-[10px] text-slate-400 block uppercase">Status Breakdown</span>
-                <div className="flex items-center gap-2 text-[11px] font-bold mt-0.5">
-                  <span className="text-emerald-400">{transactions.length - failedCount} Clean</span>
-                  <span className="text-slate-500">|</span>
-                  <span className="text-rose-400">{failedCount} Failed</span>
-                </div>
+            <div className="mt-2 bg-slate-950/80 p-2 rounded-xl border border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[10px]">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#14F195]" />
+                <span className="text-slate-300 font-bold">{transactions.length - failedCount} Clean</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_6px_#f43f5e] ml-2" />
+                <span className="text-slate-300 font-bold">{failedCount} Failed</span>
               </div>
             </div>
           </div>
 
-          {/* Bottom Right: INVESTIGATION PANEL */}
-          <div className="bg-[#06101e]/85 backdrop-blur-md border border-cyan-500/30 rounded-xl p-3.5 shadow-lg">
-            <div className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider border-b border-cyan-500/20 pb-2 mb-2.5">
-              Investigation Panel
+          {/* Bottom Right: LEVELED UP INVESTIGATION PANEL */}
+          <div className="bg-[#06101e]/85 backdrop-blur-md border border-cyan-500/30 rounded-xl p-3 shadow-lg space-y-2">
+            <div className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider border-b border-cyan-500/20 pb-1 flex items-center justify-between">
+              <span>Investigation Panel</span>
+              <span className="text-[9px] text-emerald-400 font-bold">● Active Engine</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            {/* Educational Info Box */}
+            <div className="text-[9px] text-slate-300 bg-slate-950/80 p-2 rounded-lg border border-slate-800 leading-tight">
+              <span className="text-cyan-400 font-bold block mb-0.5">Solana On-Chain Forensics Info:</span>
+              Transactions are ingested into client-side DuckDB-Wasm for zero-latency SQL execution & 3D threat detection.
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5">
               <button
                 onClick={onToggleSQL}
-                className={`p-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                className={`p-2 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all ${
                   isSQLOpen
                     ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_12px_rgba(0,242,254,0.3)]'
                     : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700'
@@ -388,31 +368,23 @@ export const CyberHUD: React.FC<CyberHUDProps> = ({
               </button>
 
               <button
-                onClick={onToggleWebMCP}
-                className={`p-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                  isWebMCPOpen
-                    ? 'bg-purple-500/20 border-purple-400 text-purple-300 shadow-[0_0_12px_rgba(153,69,255,0.3)]'
-                    : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700'
-                }`}
-              >
-                <Zap className="w-3.5 h-3.5 text-solana-purple" />
-                <span>WebMCP Agent</span>
-              </button>
-
-              <button
                 onClick={onAnalyzeAnomalies}
-                className="p-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
+                className="p-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all"
               >
                 <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
                 <span>Anomalies</span>
               </button>
 
               <button
-                onClick={onResetView}
-                className="p-2 rounded-xl bg-slate-950/70 hover:bg-slate-900 border border-slate-800 text-slate-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
+                onClick={onToggleWebMCP}
+                className={`p-2 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all col-span-2 ${
+                  isWebMCPOpen
+                    ? 'bg-purple-500/20 border-purple-400 text-purple-300 shadow-[0_0_12px_rgba(153,69,255,0.3)]'
+                    : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700'
+                }`}
               >
-                <RefreshCw className="w-3.5 h-3.5 text-solana-yellow" />
-                <span>Reset View</span>
+                <Zap className="w-3.5 h-3.5 text-solana-purple" />
+                <span>Toggle WebMCP Prompts Drawer</span>
               </button>
             </div>
           </div>

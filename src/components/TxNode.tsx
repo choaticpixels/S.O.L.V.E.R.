@@ -116,8 +116,8 @@ export const TxNode: React.FC<TxNodeProps> = ({ node, isHighlighted, onSelect })
         />
       </mesh>
 
-      {/* Floating HUD Callout Box Matching Image */}
-      {(hovered || isHighlighted) && (
+      {/* Floating HUD Callout Box (Only on hover when node is NOT selected to avoid clutter) */}
+      {(hovered && !isHighlighted) && (
         <Html distanceFactor={16} position={[1.4, 0.4, 0]} style={{ pointerEvents: 'none' }}>
           <div className="relative bg-[#06101e]/95 border-2 border-solana-yellow/90 backdrop-blur-md p-3 rounded-lg shadow-[0_0_25px_rgba(254,215,0,0.35)] min-w-[230px] font-mono text-xs">
             {/* Connecting Pointer Line Accent */}

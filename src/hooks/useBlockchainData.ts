@@ -7,7 +7,7 @@ const DEFAULT_WALLETS = [
   { name: 'Raydium Pool', address: '5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1' },
   { name: 'Jupiter Aggregator', address: 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4' },
   { name: 'Solana Foundation', address: '5YNmS1R9nNSCDzb5a7mMJ1dwK9uHeAAF4CmPEwKgVWr8' },
-  { name: 'Binance Hot Wallet', address: '2ojv9BAiHUrvG9xjTxGatNuP5nNDxDFPxPz2w1Pug1Gq' },
+  { name: 'Binance Hot Wallet', address: '5tzFkiKscXHK5ZXCGbXZxdw7gTjjD54znS5582Px2LYj' },
 ];
 
 export function useBlockchainData() {
@@ -87,22 +87,26 @@ export function useBlockchainData() {
     const nodes: Node3D[] = sorted.map((tx, idx) => {
       let x = 0, y = 0, z = 0;
 
+      // Hash transaction signature to create unique spatial fingerprint per wallet
+      const sigHash = tx.signature ? tx.signature.split('').reduce((acc, char) => (acc << 5) - acc + char.charCodeAt(0), 0) : idx;
+      const sigOffset = (Math.abs(sigHash % 1000) / 1000) - 0.5;
+
       if (layoutMode === 'helical') {
         // Helical / Spiral Timeline
-        const angle = idx * 0.45;
-        const radius = 6 + (idx / total) * 14;
-        y = (idx - total / 2) * 0.4;
+        const angle = idx * 0.45 + sigOffset * Math.PI * 0.5;
+        const radius = 6 + (idx / total) * 14 + sigOffset * 3;
+        y = (idx - total / 2) * 0.4 + (tx.amountSol > 0 ? Math.log10(tx.amountSol + 1) * 2 : 0);
         x = Math.cos(angle) * radius;
         z = Math.sin(angle) * radius;
       } else {
         // Cluster / Orbital Network Graph
         const goldenAngle = 137.5 * (Math.PI / 180);
-        const radius = Math.sqrt(idx + 1) * 2.2 + 4;
+        const radius = Math.sqrt(idx + 1) * 2.2 + 4 + sigOffset * 4;
         const phi = Math.acos(1 - (2 * (idx + 0.5)) / total);
-        const theta = goldenAngle * idx;
+        const theta = goldenAngle * idx + sigOffset * (Math.PI / 2);
 
         x = radius * Math.sin(phi) * Math.cos(theta);
-        y = radius * Math.sin(phi) * Math.sin(theta);
+        y = radius * Math.sin(phi) * Math.sin(theta) + (tx.amountSol > 0 ? Math.log10(tx.amountSol + 1) * 2.5 : 0);
         z = radius * Math.cos(phi);
       }
 
