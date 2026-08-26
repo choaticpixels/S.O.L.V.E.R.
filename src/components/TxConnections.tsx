@@ -8,51 +8,75 @@ interface TxConnectionsProps {
 }
 
 export const TxConnections: React.FC<TxConnectionsProps> = ({ nodes, highlightedSignature }) => {
-  const lineGeometries = useMemo(() => {
-    if (nodes.length < 2) return [];
+  const connectionGeometries = useMemo(() => {
+    if (nodes.length === 0) return [];
 
-    const lines: THREE.BufferGeometry[] = [];
-    for (let i = 0; i < nodes.length - 1; i++) {
-      const p1 = new THREE.Vector3(nodes[i].x, nodes[i].y, nodes[i].z);
-      const p2 = new THREE.Vector3(nodes[i + 1].x, nodes[i + 1].y, nodes[i + 1].z);
+    const lines: { geometry: THREE.BufferGeometry; color: string; isTarget: boolean }[] = [];
+    const center = new THREE.Vector3(0, 0, 0);
 
-      // Create smooth quadratic bezier curve between nodes
-      const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
-      mid.y += 1.5; // Curve upward
+    // 1. Connect every node to the central hub
+    nodes.forEach((node) => {
+      const pos = new THREE.Vector3(node.x, node.y, node.z);
+      const mid = new THREE.Vector3().addVectors(center, pos).multiplyScalar(0.5);
+      mid.y += 1.2;
 
-      const curve = new THREE.QuadraticBezierCurve3(p1, mid, p2);
-      const points = curve.getPoints(20);
+      const curve = new THREE.QuadraticBezierCurve3(center, mid, pos);
+      const points = curve.getPoints(12);
       const geometry = new THREE.BufferGeometry().setFromPoints(points);
-      lines.push(geometry);
+      const isTarget = node.signature === highlightedSignature;
+
+      lines.push({
+        geometry,
+        color: isTarget ? '#FED700' : node.x < 0 ? '#D037FF' : '#00F2FE',
+        isTarget,
+      });
+    });
+
+    // 2. Interconnect nearby nodes (Network Web Effect)
+    for (let i = 0; i < nodes.length; i++) {
+      const p1 = new THREE.Vector3(nodes[i].x, nodes[i].y, nodes[i].z);
+      for (let j = i + 1; j < Math.min(i + 5, nodes.length); j++) {
+        const p2 = new THREE.Vector3(nodes[j].x, nodes[j].y, nodes[j].z);
+        if (p1.distanceTo(p2) < 14) {
+          const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+          const curve = new THREE.QuadraticBezierCurve3(p1, mid, p2);
+          const points = curve.getPoints(8);
+          const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+          const isTarget =
+            nodes[i].signature === highlightedSignature ||
+            nodes[j].signature === highlightedSignature;
+
+          lines.push({
+            geometry,
+            color: isTarget ? '#FED700' : (i + j) % 2 === 0 ? '#D037FF' : '#00F2FE',
+            isTarget,
+          });
+        }
+      }
     }
+
     return lines;
-  }, [nodes]);
+  }, [nodes, highlightedSignature]);
 
   return (
     <group>
-      {lineGeometries.map((geometry, index) => {
-        const sourceSig = nodes[index]?.signature;
-        const targetSig = nodes[index + 1]?.signature;
-        const isConnectedToHighlight =
-          highlightedSignature && (sourceSig === highlightedSignature || targetSig === highlightedSignature);
-
-        return (
-          <primitive
-            key={index}
-            object={
-              new THREE.Line(
-                geometry,
-                new THREE.LineBasicMaterial({
-                  color: isConnectedToHighlight ? '#FED700' : index % 2 === 0 ? '#9945FF' : '#14F195',
-                  transparent: true,
-                  opacity: isConnectedToHighlight ? 0.9 : 0.25,
-                  linewidth: isConnectedToHighlight ? 2 : 1,
-                })
-              )
-            }
-          />
-        );
-      })}
+      {connectionGeometries.map((conn, index) => (
+        <primitive
+          key={index}
+          object={
+            new THREE.Line(
+              conn.geometry,
+              new THREE.LineBasicMaterial({
+                color: conn.color,
+                transparent: true,
+                opacity: conn.isTarget ? 0.95 : 0.35,
+                linewidth: conn.isTarget ? 2 : 1,
+              })
+            )
+          }
+        />
+      ))}
     </group>
   );
 };

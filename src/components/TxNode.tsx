@@ -13,51 +13,83 @@ interface TxNodeProps {
 export const TxNode: React.FC<TxNodeProps> = ({ node, isHighlighted, onSelect }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   const outerGlowRef = useRef<THREE.Mesh>(null);
+  const ringRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
 
-  // Pulse animation frame
+  // Rotate inner mesh & target reticle rings
   useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
     if (meshRef.current) {
-      meshRef.current.rotation.y = clock.getElapsedTime() * 0.6;
-      meshRef.current.rotation.x = Math.sin(clock.getElapsedTime() * 0.4) * 0.3;
+      meshRef.current.rotation.y = t * 0.8;
+      meshRef.current.rotation.x = Math.sin(t * 0.5) * 0.3;
+    }
+    if (ringRef.current) {
+      ringRef.current.rotation.z = -t * 1.2;
     }
     if (outerGlowRef.current) {
       const pulseSpeed = node.riskLevel === 'HIGH' ? 6 : 3;
-      const scale = (isHighlighted ? 1.4 : 1.2) + Math.sin(clock.getElapsedTime() * pulseSpeed + node.x) * 0.15;
+      const scale = (isHighlighted ? 1.5 : 1.2) + Math.sin(t * pulseSpeed + node.x) * 0.15;
       outerGlowRef.current.scale.set(scale, scale, scale);
     }
   });
 
-  const nodeColor = isHighlighted ? '#FED700' : node.color;
+  // Assign color: Left side nodes = Magenta/Purple (#D037FF), Right side = Cyan/Green (#00F2FE/#14F195), Target = Gold (#FED700)
+  let baseColor = node.x < 0 ? '#D037FF' : '#00F2FE';
+  if (node.status === 'failed' || node.riskLevel === 'HIGH') {
+    baseColor = '#FF3366';
+  }
+  const nodeColor = isHighlighted ? '#FED700' : baseColor;
 
-  // Render appropriate 3D geometry based on node shape type
   const renderGeometry = () => {
     switch (node.shape) {
       case 'octahedron':
-        return <octahedronGeometry args={[isHighlighted ? 0.6 : 0.45, 0]} />;
+        return <octahedronGeometry args={[isHighlighted ? 0.65 : 0.45, 0]} />;
       case 'tetrahedron':
-        return <tetrahedronGeometry args={[isHighlighted ? 0.6 : 0.45, 0]} />;
+        return <tetrahedronGeometry args={[isHighlighted ? 0.65 : 0.45, 0]} />;
       case 'icosahedron':
-        return <icosahedronGeometry args={[isHighlighted ? 0.55 : 0.4, 0]} />;
+        return <icosahedronGeometry args={[isHighlighted ? 0.6 : 0.42, 0]} />;
       case 'sphere':
       default:
-        return <sphereGeometry args={[isHighlighted ? 0.5 : 0.38, 16, 16]} />;
+        return <sphereGeometry args={[isHighlighted ? 0.55 : 0.4, 20, 20]} />;
     }
   };
 
   return (
     <group position={[node.x, node.y, node.z]}>
-      {/* Outer Glowing Sphere / Aura */}
+      {/* Target Reticle Crosshair (3D Ring HUD) when Highlighted */}
+      {isHighlighted && (
+        <group ref={ringRef}>
+          {/* Inner Ring */}
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[1.2, 1.28, 32]} />
+            <meshBasicMaterial color="#FED700" side={THREE.DoubleSide} transparent opacity={0.9} />
+          </mesh>
+          {/* Outer Dashed Ring */}
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[1.45, 1.52, 16]} />
+            <meshBasicMaterial color="#FED700" side={THREE.DoubleSide} transparent opacity={0.6} wireframe />
+          </mesh>
+          {/* 4 Crosshair Ticks */}
+          {[0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2].map((angle, i) => (
+            <mesh key={i} rotation={[0, 0, angle]} position={[Math.cos(angle) * 1.35, Math.sin(angle) * 1.35, 0]}>
+              <boxGeometry args={[0.25, 0.05, 0.05]} />
+              <meshBasicMaterial color="#FED700" />
+            </mesh>
+          ))}
+        </group>
+      )}
+
+      {/* Outer Glowing Sphere Aura */}
       <mesh ref={outerGlowRef}>
-        <sphereGeometry args={[0.65, 16, 16]} />
+        <sphereGeometry args={[0.7, 16, 16]} />
         <meshBasicMaterial
           color={nodeColor}
           transparent
-          opacity={isHighlighted ? 0.7 : hovered ? 0.5 : 0.25}
+          opacity={isHighlighted ? 0.75 : hovered ? 0.55 : 0.25}
         />
       </mesh>
 
-      {/* Main Core Node Geometry */}
+      {/* Core Node Mesh */}
       <mesh
         ref={meshRef}
         onClick={(e) => {
@@ -78,49 +110,50 @@ export const TxNode: React.FC<TxNodeProps> = ({ node, isHighlighted, onSelect })
         <meshStandardMaterial
           color={nodeColor}
           emissive={nodeColor}
-          emissiveIntensity={isHighlighted ? 2.8 : hovered ? 2.0 : 1.2}
-          roughness={0.15}
-          metalness={0.85}
+          emissiveIntensity={isHighlighted ? 3.0 : hovered ? 2.2 : 1.4}
+          roughness={0.1}
+          metalness={0.9}
         />
       </mesh>
 
-      {/* Interactive 3D Tooltip on Hover or Selection */}
+      {/* Floating HUD Callout Box Matching Image */}
       {(hovered || isHighlighted) && (
-        <Html distanceFactor={16} position={[0, 0.85, 0]} center>
-          <div className="bg-slate-900/95 border border-slate-700/80 backdrop-blur-md p-2.5 rounded-xl shadow-2xl text-xs min-w-[200px] pointer-events-none transition-all">
-            <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-1 mb-1.5">
-              <span className="font-mono text-solana-yellow font-bold">
-                {node.signature.slice(0, 8)}...{node.signature.slice(-4)}
-              </span>
-              <span
-                className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                  node.riskLevel === 'HIGH'
-                    ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
-                    : 'bg-emerald-500/20 text-solana-green border border-emerald-500/40'
-                }`}
-              >
-                {node.riskLevel} RISK
+        <Html distanceFactor={16} position={[1.4, 0.4, 0]} style={{ pointerEvents: 'none' }}>
+          <div className="relative bg-[#06101e]/95 border-2 border-solana-yellow/90 backdrop-blur-md p-3 rounded-lg shadow-[0_0_25px_rgba(254,215,0,0.35)] min-w-[230px] font-mono text-xs">
+            {/* Connecting Pointer Line Accent */}
+            <div className="absolute -left-3 top-4 w-3 h-[2px] bg-solana-yellow" />
+
+            {/* Header */}
+            <div className="bg-solana-yellow/15 border border-solana-yellow/40 rounded px-2 py-1 mb-2 flex items-center justify-between">
+              <span className="font-bold text-solana-yellow text-[11px] tracking-wide">
+                TARGET: {node.signature.slice(0, 6)}...{node.signature.slice(-4)}
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-1 text-[11px] font-mono text-slate-300">
-              <div>
-                <span className="text-slate-500 block text-[9px] uppercase">Type</span>
-                <span className="font-semibold text-white">{node.type}</span>
+            <div className="text-[10px] text-slate-400 font-semibold mb-1">
+              Suspect Transaction / Activity
+            </div>
+
+            <div className="space-y-1 text-[11px] text-slate-200 border-t border-slate-800/80 pt-1.5">
+              <div className="flex justify-between">
+                <span className="text-slate-400">TxHash:</span>
+                <span className="text-cyan-300 font-bold">{node.signature.slice(0, 8)}...</span>
               </div>
-              <div>
-                <span className="text-slate-500 block text-[9px] uppercase">Volume</span>
-                <span className="font-semibold text-solana-green">{node.amountSol} SOL</span>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Value:</span>
+                <span className="text-solana-green font-bold">{node.amountSol} SOL</span>
               </div>
-              <div>
-                <span className="text-slate-500 block text-[9px] uppercase">Status</span>
-                <span className={node.status === 'success' ? 'text-solana-green' : 'text-rose-400'}>
-                  {node.status}
+              <div className="flex justify-between">
+                <span className="text-slate-400">Status:</span>
+                <span className={node.status === 'success' ? 'text-solana-green font-semibold' : 'text-rose-400 font-semibold'}>
+                  {node.status.toUpperCase()}
                 </span>
               </div>
-              <div>
-                <span className="text-slate-500 block text-[9px] uppercase">Slot</span>
-                <span>#{node.slot}</span>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Risk Score:</span>
+                <span className={node.riskLevel === 'HIGH' ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
+                  {node.riskLevel === 'HIGH' ? '98% (High)' : '12% (Low)'}
+                </span>
               </div>
             </div>
           </div>

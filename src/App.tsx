@@ -2,10 +2,9 @@ import React, { useState, useCallback } from 'react';
 import { useBlockchainData } from './hooks/useBlockchainData';
 import { useWebMCP } from './hooks/useWebMCP';
 import { CanvasArea } from './components/CanvasArea';
-import { WalletInputOverlay } from './components/WalletInputOverlay';
+import { CyberHUD } from './components/CyberHUD';
 import { SQLConsole } from './components/SQLConsole';
 import { NodeInspector } from './components/NodeInspector';
-import { StatsPanel } from './components/StatsPanel';
 import { WebMCPStatus } from './components/WebMCPStatus';
 import { Node3D } from './types';
 
@@ -32,6 +31,8 @@ export default function App() {
 
   const [selectedNode, setSelectedNode] = useState<Node3D | null>(null);
   const [resetTrigger, setResetTrigger] = useState<number>(0);
+  const [isSQLOpen, setIsSQLOpen] = useState<boolean>(false);
+  const [isWebMCPOpen, setIsWebMCPOpen] = useState<boolean>(true);
 
   // WebMCP Action Handlers
   const handleHighlightNode = useCallback(
@@ -51,7 +52,7 @@ export default function App() {
     setResetTrigger((prev) => prev + 1);
   }, [resetFilter]);
 
-  // Hook up WebMCP Agent registration inside useEffect
+  // Hook up WebMCP Agent registration
   const { isSupported: isWebMCPSupported, registeredTools, lastAction: lastAgentAction } = useWebMCP({
     filterByStatus,
     highlightNode: handleHighlightNode,
@@ -75,24 +76,39 @@ export default function App() {
         walletAddress={walletAddress}
       />
 
-      {/* Top Left: Wallet Search Overlay */}
-      <WalletInputOverlay
-        currentWallet={walletAddress}
+      {/* Cyberpunk Glassmorphism HUD Overlay Layer */}
+      <CyberHUD
+        walletAddress={walletAddress}
+        transactions={transactions}
+        nodes={nodes3D}
+        highlightedSignature={highlightedSignature}
         isLoading={isLoading}
         isDuckDBReady={isDuckDBReady}
+        currentFilterStatus={currentFilter.status || 'all'}
+        layoutMode={layoutMode}
         onSearch={loadWallet}
-        error={error}
+        onSelectNode={handleSelectNode}
+        onChangeLayout={setLayoutMode}
+        onFilterStatus={filterByStatus}
+        onAnalyzeAnomalies={analyzeAnomalies}
+        onResetView={handleResetView}
+        onToggleSQL={() => setIsSQLOpen((prev) => !prev)}
+        onToggleWebMCP={() => setIsWebMCPOpen((prev) => !prev)}
         defaultWallets={defaultWallets}
+        isSQLOpen={isSQLOpen}
+        isWebMCPOpen={isWebMCPOpen}
       />
 
-      {/* Top Right: WebMCP Status & Tools Indicator */}
-      <WebMCPStatus
-        registeredTools={registeredTools}
-        isWebMCPSupported={isWebMCPSupported}
-        lastAgentAction={lastAgentAction}
-      />
+      {/* WebMCP Status & Tools Overlay Panel */}
+      {isWebMCPOpen && (
+        <WebMCPStatus
+          registeredTools={registeredTools}
+          isWebMCPSupported={isWebMCPSupported}
+          lastAgentAction={lastAgentAction}
+        />
+      )}
 
-      {/* Node Inspector Modal / Sidebar */}
+      {/* Node Inspector Sidebar Modal */}
       <NodeInspector
         node={selectedNode}
         onClose={() => {
@@ -102,25 +118,15 @@ export default function App() {
         onFocusNode={handleHighlightNode}
       />
 
-      {/* Bottom Left: DuckDB SQL Terminal */}
-      <SQLConsole
-        onExecuteSQL={executeSQL}
-        onReset={handleResetView}
-        isDuckDBReady={isDuckDBReady}
-        totalCount={transactions.length}
-      />
-
-      {/* Bottom Right: Status Filters & Camera Reset */}
-      <StatsPanel
-        nodes={nodes3D}
-        totalTransactions={transactions.length}
-        currentFilterStatus={currentFilter.status || 'all'}
-        layoutMode={layoutMode}
-        onChangeLayout={setLayoutMode}
-        onFilterStatus={filterByStatus}
-        onAnalyzeAnomalies={analyzeAnomalies}
-        onResetView={handleResetView}
-      />
+      {/* DuckDB Interactive SQL Console Drawer */}
+      {isSQLOpen && (
+        <SQLConsole
+          onExecuteSQL={executeSQL}
+          onReset={handleResetView}
+          isDuckDBReady={isDuckDBReady}
+          totalCount={transactions.length}
+        />
+      )}
     </div>
   );
 }
