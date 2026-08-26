@@ -108,6 +108,7 @@ export default function App() {
           registeredTools={registeredTools}
           isWebMCPSupported={isWebMCPSupported}
           lastAgentAction={lastAgentAction}
+          onClose={() => setIsWebMCPOpen(false)}
         />
       )}
 

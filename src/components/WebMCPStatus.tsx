@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Bot, Check, Sparkles, Copy, Terminal, ShieldAlert, Play } from 'lucide-react';
+import { Bot, Check, Sparkles, Copy, Play, Minus, X, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface WebMCPStatusProps {
   registeredTools: string[];
   isWebMCPSupported: boolean;
   lastAgentAction: string | null;
+  onClose?: () => void;
 }
 
 const SAMPLE_PROMPTS = [
@@ -34,7 +35,9 @@ export const WebMCPStatus: React.FC<WebMCPStatusProps> = ({
   registeredTools,
   isWebMCPSupported,
   lastAgentAction,
+  onClose,
 }) => {
+  const [isMinimized, setIsMinimized] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'tools' | 'prompts'>('prompts');
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
 
@@ -54,9 +57,27 @@ export const WebMCPStatus: React.FC<WebMCPStatusProps> = ({
     }
   };
 
+  if (isMinimized) {
+    return (
+      <div className="absolute top-4 right-4 font-mono z-20 pointer-events-auto hidden md:block">
+        <button
+          onClick={() => setIsMinimized(false)}
+          className="flex items-center gap-2 bg-[#070f1e]/90 backdrop-blur-xl border border-cyan-500/40 hover:border-cyan-400 px-3 py-1.5 rounded-full shadow-[0_0_15px_rgba(0,242,254,0.2)] text-xs text-slate-200 transition-all"
+        >
+          <div className="w-5 h-5 rounded-full bg-gradient-to-r from-purple-500 to-cyan-400 p-0.5 flex items-center justify-center">
+            <Bot className="w-3.5 h-3.5 text-slate-950" />
+          </div>
+          <span className="font-bold">WebMCP Co-Pilot</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+          <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1" />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="absolute top-4 right-4 font-mono z-20 pointer-events-auto hidden md:block">
-      <div className="bg-[#070f1e]/90 backdrop-blur-xl border border-cyan-500/40 p-3.5 rounded-2xl shadow-[0_0_25px_rgba(0,242,254,0.15)] w-80 space-y-3">
+      <div className="bg-[#070f1e]/95 backdrop-blur-xl border border-cyan-500/40 p-3.5 rounded-2xl shadow-[0_0_30px_rgba(0,242,254,0.2)] w-80 space-y-3">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-cyan-500/20 pb-2">
           <div className="flex items-center gap-2">
@@ -65,15 +86,38 @@ export const WebMCPStatus: React.FC<WebMCPStatusProps> = ({
             </div>
             <span className="text-xs font-bold text-slate-100">WebMCP AI Co-Pilot</span>
           </div>
-          <span
-            className={`text-[9px] px-2 py-0.5 rounded-full border font-bold ${
-              isWebMCPSupported
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_8px_rgba(20,241,149,0.3)]'
-                : 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-[0_0_8px_rgba(153,69,255,0.3)]'
-            }`}
-          >
-            {isWebMCPSupported ? 'Native WebMCP' : 'Polyfill Active'}
-          </span>
+
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`text-[9px] px-2 py-0.5 rounded-full border font-bold ${
+                isWebMCPSupported
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                  : 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+              }`}
+            >
+              {isWebMCPSupported ? 'Native' : 'Polyfill'}
+            </span>
+
+            {/* Minimize button */}
+            <button
+              onClick={() => setIsMinimized(true)}
+              className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-all"
+              title="Minimize Panel"
+            >
+              <Minus className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Close button */}
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-rose-400 transition-all"
+                title="Close Panel"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Navigation Tabs */}
@@ -166,4 +210,5 @@ export const WebMCPStatus: React.FC<WebMCPStatusProps> = ({
     </div>
   );
 };
+
 
